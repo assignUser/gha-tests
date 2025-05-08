@@ -18,17 +18,7 @@ name: Filter Priority
 # https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#onpushbranchestagsbranches-ignoretags-ignore
 # But it is unclear how `paths` plays into it, is it: `paths || (tags && branches)` or `paths && tags && branches` if all are defined.
 
-# Test Scenario 1: !tags && branch && paths =
-on:
-  push:
-    tags:
-      - filter-priority
-    branches:
-      - filter-priority
-    paths:
-      - ".github/workflows/filter_priority.yml"
-
-# Test Scenario 2: tags && branch && !paths =
+# Test Scenario 1: !tags && branch && paths = true
 # on:
 #   push:
 #     tags:
@@ -36,9 +26,19 @@ on:
 #     branches:
 #       - filter-priority
 #     paths:
-#       - "README.md"
+#       - ".github/workflows/filter_priority.yml"
 
-# Test Scenario 2: !tags && branch && !paths =
+# Test Scenario 2: tags && branch && !paths =
+on:
+  push:
+    tags:
+      - filter-priority
+    branches:
+      - filter-priority
+    paths:
+      - "README.md"
+
+# Test Scenario 3: !tags && branch && !paths =
 # on:
 #   push:
 #     tags:
@@ -48,7 +48,7 @@ on:
 #     paths:
 #       - "README.md"
 
-# Test Scenario 3: !tags && !branch && paths =
+# Test Scenario 4: !tags && !branch && paths =
 # on:
 #   push:
 #     tags:
