@@ -29,7 +29,7 @@ name: Filter Priority
 #       - ".github/workflows/filter_priority.yml"
 
 # Test Scenario 2: (!)tags && branch && !paths = ?
-# on commit: tags && branch && !paths = false
+# on commit: !tags && branch && !paths = false
 # on tag: tags && branch && !paths = true
 # on:
 #   push:
@@ -51,14 +51,27 @@ name: Filter Priority
 #       - ".github/workflows/filter_priority.yml"
 
 # Test Scenario 4: (!)tags && branch = ?
-# on commit: !tags && branch =
-# on tag: tags && branch =
+# on commit: !tags && branch = true
+# on tag: tags && branch = true
+# This should not run on commit according to the docs but does?
+# > If you define both branches/branches-ignore and paths/paths-ignore,
+# > the workflow will only run when both filters are satisfied.
+# on:
+#   push:
+#     tags:
+#       - filter-priority
+#     branches:
+#       - filter-priority
+
+# Test Scenario 5: (!)tags && !branch = ?
+# on commit: !tags && !branch =
+# on tag: tags && !branch =
 on:
   push:
     tags:
       - filter-priority
     branches:
-      - filter-priority
+      - nothing
 
 permissions: {}
 
