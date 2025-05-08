@@ -25,7 +25,8 @@ on:
     branches:
       - nothing
     paths:
-      - ".github/workflows/filter_priority.yml"
+      - "README.md"
+      # - ".github/workflows/filter_priority.yml"
   workflow_dispatch:
 
 permissions: {}
