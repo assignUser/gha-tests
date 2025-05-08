@@ -23,7 +23,7 @@ on:
     branches:
       - filter-priority
     paths:
-      - "README.md"
+      - ".github/workflows/filter_priority.yml"
   workflow_dispatch:
 
 permissions: {}
