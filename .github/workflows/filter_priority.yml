@@ -28,7 +28,7 @@ name: Filter Priority
 #     paths:
 #       - ".github/workflows/filter_priority.yml"
 
-# Test Scenario 2: tags && branch && !paths = ?
+# Test Scenario 2: (!)tags && branch && !paths = ?
 # on commit: tags && branch && !paths = false
 # on tag: tags && branch && !paths = true
 # on:
@@ -40,25 +40,15 @@ name: Filter Priority
 #     paths:
 #       - "README.md"
 
-# Test Scenario 3: !tags && branch && !paths =
+# Test Scenario 3: !tags && !branch && paths =
 on:
   push:
     tags:
       - filter-priority
     branches:
-      - filter-priority
+      - nothing
     paths:
-      - "README.md"
-
-# Test Scenario 4: !tags && !branch && paths =
-# on:
-#   push:
-#     tags:
-#       - filter-priority
-#     branches:
-#       - nothing
-#     paths:
-#       - ".github/workflows/filter_priority.yml"
+      - ".github/workflows/filter_priority.yml"
 
 permissions: {}
 
