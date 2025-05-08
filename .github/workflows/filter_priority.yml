@@ -20,6 +20,8 @@ name: Filter Priority
 
 on:
   push:
+    tags:
+      - filter-priority
     branches:
       - filter-priority
     paths:
