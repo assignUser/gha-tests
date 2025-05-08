@@ -1,4 +1,4 @@
-# Copyright Jacob Wujciak-Jens 
+# Copyright Jacob Wujciak-Jens
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,16 +18,45 @@ name: Filter Priority
 # https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#onpushbranchestagsbranches-ignoretags-ignore
 # But it is unclear how `paths` plays into it, is it: `paths || (tags && branches)` or `paths && tags && branches` if all are defined.
 
+# Test Scenario 1: !tags && branch && paths =
 on:
   push:
     tags:
       - filter-priority
     branches:
-      - nothing
+      - filter-priority
     paths:
-      # - "README.md"
       - ".github/workflows/filter_priority.yml"
-  workflow_dispatch:
+
+# Test Scenario 2: tags && branch && !paths =
+# on:
+#   push:
+#     tags:
+#       - filter-priority
+#     branches:
+#       - filter-priority
+#     paths:
+#       - "README.md"
+
+# Test Scenario 2: !tags && branch && !paths =
+# on:
+#   push:
+#     tags:
+#       - filter-priority
+#     branches:
+#       - nothing
+#     paths:
+#       - "README.md"
+
+# Test Scenario 3: !tags && !branch && paths =
+# on:
+#   push:
+#     tags:
+#       - filter-priority
+#     branches:
+#       - nothing
+#     paths:
+#       - ".github/workflows/filter_priority.yml"
 
 permissions: {}
 
@@ -35,4 +64,4 @@ jobs:
   filter-priority:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "${{ toJSON(github.event) }}" 
+      - run: echo "${{ toJSON(github.event) }}"
