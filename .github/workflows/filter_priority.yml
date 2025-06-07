@@ -14,9 +14,9 @@
 
 name: Filter Priority
 
-# The docs for the interplay of the `tags`, `branches` and `paths` filters is bit unclear 
+# The docs for the interplay of the `tags`, `branches` and `paths` filters is bit unclear
 # https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#onpushbranchestagsbranches-ignoretags-ignore
-# With the below test cases it becomes clear that the workflow runs if this is true: tags || (branches && paths) 
+# With the below test cases it becomes clear that the workflow runs if this is true: tags || (branches && paths)
 # If `branches` or `tags` are not defined they are true.
 
 # Test Scenario 1: !tags && branch && paths = true
@@ -71,11 +71,11 @@ on:
     branches:
       - nothing
 
-
 permissions: {}
 
 jobs:
   filter-priority:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "${{ toJSON(github.event) }}"
+      - run: | # zizmor: ignore[template-injection]
+          echo "${{ toJSON(github.event) }}"

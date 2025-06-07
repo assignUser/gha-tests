@@ -1,4 +1,4 @@
-# Copyright Jacob Wujciak-Jens 
+# Copyright Jacob Wujciak-Jens
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ name: template
 on:
   push:
     paths:
-      - ".github/workflows/template.yml"
-  workflow_dispatch:
+      - .github/workflows/template.yml
+  workflow_dispatch: {}
 
 permissions: {}
 
