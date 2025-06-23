@@ -31,11 +31,11 @@ jobs:
           SECRET_TOKEN: shp_123456
         run: |
           echo "Masking the secret value 'shp_78910'"
-          echo "add-mask::shp_78910"
+          echo "::add-mask::shp_78910"
           echo "Value is masked immediatly: shp_78910"
 
           echo "Masking the envvar SECRET_TOKEN"
-          echo "add-mask::SECRET_TOKEN"
+          echo "::add-mask::SECRET_TOKEN"
           echo "This mask only takes effect in the next step: $SECRET_TOKEN"
       - run: |
           echo "Envvar name and value will be masked now: SECRET_TOKEN = $SECRET_TOKEN"
