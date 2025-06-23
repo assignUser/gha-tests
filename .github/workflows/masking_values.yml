@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The [docs](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#masking-a-value-in-a-log)
-# don't really make it clear that masking an envvar will only take effect in the NEXT step!
-
 name: Masking Values
 
 on:
@@ -39,10 +36,8 @@ jobs:
 
           echo "Masking the envvar SECRET_TOKEN"
           echo "::add-mask::$SECRET_TOKEN"
-          echo "This mask only takes effect in the next step: $SECRET_TOKEN"
-        # It turns out that the envvar will not be masked in the fold-out group preview:
-        # Run echo "Envvar name and value will be masked now: SECRET_TOKEN = $SECRET_TOKEN"
+          echo "This masks the : $SECRET_TOKEN"
+        # It turns out that the mask will not be applied in the fold-out group preview
+        # if the step has no `name:`
       - run: |
-          echo "Envvar name and value will be masked now: SECRET_TOKEN = $SECRET_TOKEN"
-        env:
-          SECRET_TOKEN: shp_123456
+          echo "Leaking secret value: shp_123456"
