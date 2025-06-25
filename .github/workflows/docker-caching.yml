@@ -21,7 +21,7 @@
 # by multiple other images that all have a long build time and thus benefit
 # from parallelization.
 #
-# So let's find a way to use the artifact actions to move the images between jobs.
+# Utilizing the cache-{from, to} type `local` makes this surprisingly easy:
 
 name: Docker Caching
 
@@ -118,7 +118,6 @@ jobs:
           push: false
 
   stage2:
-    if: false
     needs: [base-image, dockerfile]
     runs-on: ubuntu-latest
     steps:
@@ -128,15 +127,20 @@ jobs:
         run: |
           echo "$DOCKERFILE_CONTENT" > Dockerfile
 
-      - name: Get Base
+      - name: Get Base Cache
         uses: actions/download-artifact@v4
         with:
           name: base
+          path: /tmp/docker_cache
 
-      - name: Import image
-        run: |
-          docker load -i base.tar
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build Stage 2
-        run: |
-          docker build --target stage2 .
+      - name: Build Base Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: stage2
+          tags: stage2:latest
+          cache-from: type=local,src=/tmp/docker_cache
+          push: false
