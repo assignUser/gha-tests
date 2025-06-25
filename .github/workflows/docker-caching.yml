@@ -103,7 +103,7 @@ jobs:
 
       - name: Build Stage 2
         run: |
-          docker build --target stage1
+          docker build --target stage1 .
 
   stage2:
     needs: base-image
@@ -126,4 +126,4 @@ jobs:
 
       - name: Build Stage 2
         run: |
-          docker build --target stage2
+          docker build --target stage2 .
