@@ -114,7 +114,7 @@ jobs:
           context: .
           target: stage1
           tags: stage1:latest
-          cache-from: type:local,src=/tmp/docker_cache
+          cache-from: type=local,src=/tmp/docker_cache
           push: false
 
   stage2:
