@@ -69,4 +69,35 @@ jobs:
           DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
         run: |
           echo "$DOCKERFILE_CONTENT" > Dockerfile
-          cat Dockerfile
+
+      - name: Build Base Image
+        run: |
+          docker build --load --target base -t base:latest .
+          docker save -o base.tar
+
+      - name: Upload Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: base
+          path: base.tar
+          retention-days: 5
+
+  stage1:
+    needs: base-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save Dockerfile
+        env:
+          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
+        run: |
+          echo "$DOCKERFILE_CONTENT" > Dockerfile
+
+      - name: Get Base
+        uses: actions/download-artifact@v4
+        with:
+          name: base
+
+      - name: Import image
+        run: |
+          docker load -i base.tar
+          docker image ls
