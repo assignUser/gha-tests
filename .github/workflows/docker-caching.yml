@@ -79,7 +79,7 @@ jobs:
           context: .
           target: base
           tags: base:latest
-          cache-to: type=local,dest=/tmp/docker_cache
+          cache-to: type=local,dest=/tmp/docker_cache,compression=zstd
           push: false
 
       - name: Upload Docker Cache
