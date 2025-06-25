@@ -100,4 +100,30 @@ jobs:
       - name: Import image
         run: |
           docker load -i base.tar
-          docker image ls
+
+      - name: Build Stage 2
+        run: |
+          docker build --target stage1
+
+  stage2:
+    needs: base-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save Dockerfile
+        env:
+          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
+        run: |
+          echo "$DOCKERFILE_CONTENT" > Dockerfile
+
+      - name: Get Base
+        uses: actions/download-artifact@v4
+        with:
+          name: base
+
+      - name: Import image
+        run: |
+          docker load -i base.tar
+
+      - name: Build Stage 2
+        run: |
+          docker build --target stage2
