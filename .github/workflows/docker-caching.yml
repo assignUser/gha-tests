@@ -83,7 +83,7 @@ jobs:
           retention-days: 5
 
   stage1:
-    needs: base-image
+    needs: [base-image, dockerfile]
     runs-on: ubuntu-latest
     steps:
       - name: Save Dockerfile
@@ -106,7 +106,7 @@ jobs:
           docker build --target stage1 .
 
   stage2:
-    needs: base-image
+    needs: [base-image, dockerfile]
     runs-on: ubuntu-latest
     steps:
       - name: Save Dockerfile
