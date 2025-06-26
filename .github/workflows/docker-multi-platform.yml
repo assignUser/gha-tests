@@ -127,6 +127,7 @@ jobs:
 
       - name: Build Base Image
         uses: docker/build-push-action@v6
+        id: build
         with:
           context: .
           target: stage1
