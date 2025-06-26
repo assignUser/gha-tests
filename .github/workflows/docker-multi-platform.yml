@@ -138,6 +138,7 @@ jobs:
           context: .
           target: stage1
           tags: ${{ env.IMAGE }}
+          load: true
           push: false
 
       - name: Save Image
