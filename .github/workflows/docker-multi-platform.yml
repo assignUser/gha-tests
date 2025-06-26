@@ -143,7 +143,7 @@ jobs:
 
       - name: Save Image
         run: |
-          docker save -o something.tar stage1:latest
+          docker save -o something.tar $IMAGE
           ls -la
 
       - name: Build Base Image
