@@ -150,24 +150,25 @@ jobs:
               }
             }
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Get Native Caches
         uses: actions/download-artifact@v4
         with:
           pattern: stage1-*
           merge-multiple: true
 
-      - name: Save Dockerfile
-        env:
-          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
-        run: |
-          echo "$DOCKERFILE_CONTENT" > Dockerfile
-
       - name: Merge Images
         run: |
           docker load -i arm64.tar
           docker load -i amd64.tar
-          docker image ls
+          docker images ls
+          arm_sha=$(docker images -q --no-trunc stage1-arm64:latest)
+          amd_sha=$(docker images -q --no-trunc stage1-amd64:latest)
+          echo "ARM64: $arm_sha"
+          echo "AMD64: $amd_sha"
 
-          docker build --platform linux/amd64,linux/arm64 -t stage1:latest .
+          docker buildx imagetools create --dry-run -t stage1:latest $arm_sha $amd_sha
 
-          docker image ls
+          docker buildx imagetools inspect stage1:latest
