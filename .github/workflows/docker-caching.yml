@@ -1,0 +1,146 @@
+# Copyright Jacob Wujciak-Jens
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Caching of docker images mostly uses registries, which is not an option
+# for workflows triggered through `pull_request`. Docker recently added
+# an experimental GitHub Actions cache backend but this suffers from the
+# 10GB/repo limitation.
+#
+# Caching is specifically useful when there is a base image that is used
+# by multiple other images that all have a long build time and thus benefit
+# from parallelization.
+#
+# Utilizing the cache-{from, to} type `local` makes this surprisingly easy:
+
+name: Docker Caching
+
+on:
+  push:
+    paths:
+      - .github/workflows/docker-caching.yml
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  dockerfile:
+    runs-on: ubuntu-latest
+    outputs:
+      dockerfile: ${{ steps.dockerfile.outputs.content }}
+    steps:
+      - name: Create Dockerfile
+        id: dockerfile
+        run: |
+          DOCKERFILE=$(cat << 'EOL'
+          # Base image
+          FROM ubuntu:20.04 AS base
+          RUN apt-get update && apt-get upgrade -y
+
+          # Stage 1
+          FROM base AS stage1
+          RUN apt-get install -y curl wget
+
+          # Stage 2
+          FROM base AS stage2
+          RUN apt-get install -y nginx redis-server
+          EOL
+          )
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$DOCKERFILE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+  base-image:
+    needs: dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save Dockerfile
+        env:
+          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
+        run: |
+          echo "$DOCKERFILE_CONTENT" > Dockerfile
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Base Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: base
+          tags: base:latest
+          cache-to: type=local,dest=/tmp/docker_cache,compression=zstd
+          push: false
+
+      - name: Upload Docker Cache
+        uses: actions/upload-artifact@v4
+        with:
+          name: base
+          path: /tmp/docker_cache
+          retention-days: 5
+
+  stage1:
+    needs: [base-image, dockerfile]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save Dockerfile
+        env:
+          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
+        run: |
+          echo "$DOCKERFILE_CONTENT" > Dockerfile
+
+      - name: Get Base Cache
+        uses: actions/download-artifact@v4
+        with:
+          name: base
+          path: /tmp/docker_cache
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Base Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: stage1
+          tags: stage1:latest
+          cache-from: type=local,src=/tmp/docker_cache
+          push: false
+
+  stage2:
+    needs: [base-image, dockerfile]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save Dockerfile
+        env:
+          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
+        run: |
+          echo "$DOCKERFILE_CONTENT" > Dockerfile
+
+      - name: Get Base Cache
+        uses: actions/download-artifact@v4
+        with:
+          name: base
+          path: /tmp/docker_cache
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Base Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: stage2
+          tags: stage2:latest
+          cache-from: type=local,src=/tmp/docker_cache
+          push: false
