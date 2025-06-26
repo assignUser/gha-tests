@@ -160,8 +160,8 @@ jobs:
 
       - name: Merge Images
         run: |
-          docker load arm64.tar
-          docker load amd64.tar
+          docker load -i arm64.tar
+          docker load -i amd64.tar
 
           docker buildx imagetools create -t stage1:latest stage1-arm64:latest stage1-amd64:latest
 
