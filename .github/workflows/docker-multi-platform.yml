@@ -15,6 +15,10 @@
 # Images supporting multiple platforms (architectures) used to require
 # Quemu due to the limited runners available in GitHub Actions but
 # now arm64 runners are available and should work much faster than with emulation
+#
+# Notes:
+# It's possible to add multiple caches of the same time but only the last one
+# will actually be used.
 
 name: Docker Multi-Platform Image
 
@@ -114,37 +118,26 @@ jobs:
         with:
           context: .
           target: stage1
-          tags: stage1:latest
-          cache-to: type=local,dest=/tmp/docker_cache
+          tags: stage1-${{ matrix.platform }}:latest
+          load: true
           push: false
 
+      - name: Export Image
+        env:
+          ARCH: ${{ matrix.platform }}
+        run: |
+          docker save -o $arch.tar stage1-$ARCH:latest
       - name: Upload Docker Cache
         uses: actions/upload-artifact@v4
         with:
           name: stage1-${{ matrix.platform }}
-          path: /tmp/docker_cache
+          path: ${{ matrix.platform }}.tar
           retention-days: 5
 
   combine:
     needs: [native, dockerfile]
     runs-on: ubuntu-latest
     steps:
-      - name: Get Native Caches
-        uses: actions/download-artifact@v4
-        with:
-          pattern: stage1-*
-          path: /tmp/docker_cache
-
-      - name: Save Dockerfile
-        env:
-          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
-        run: |
-          ls -la /tmp/docker_cache
-          echo "$DOCKERFILE_CONTENT" > Dockerfile
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker
         uses: docker/setup-docker-action@v4
         with:
@@ -156,15 +149,20 @@ jobs:
               }
             }
 
-      - name: Build Base Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: stage1
-          tags: stage1:latest
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=local,src=/tmp/docker_cache/stage1-amd64,type=local,src=/tmp/docker_cache/stage1-arm64
-          push: false
-          load: true
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - run: docker buildx imagetools inspect stage1:latest
+      - name: Get Native Caches
+        uses: actions/download-artifact@v4
+        with:
+          pattern: stage1-*
+          merge-multiple: true
+
+      - name: Merge Images
+        run: |
+          docker load arm64.tar
+          docker load amd64.tar
+
+          docker buildx imagetools create -t stage1:latest stage1-arm64:latest stage1-amd64:latest
+
+          docker buildx imagetools inspect stage1:latest
