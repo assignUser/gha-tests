@@ -1,0 +1,113 @@
+# Copyright Jacob Wujciak-Jens
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Images supporting multiple platforms (architectures) used to require
+# Quemu due to the limited runners available in GitHub Actions but
+# now arm64 runners are available and should work much faster than with emulation
+
+name: Docker Multi-Platform Image
+
+on:
+  push:
+    paths:
+      - .github/workflows/docker-multi-platform.yml
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  dockerfile:
+    runs-on: ubuntu-latest
+    outputs:
+      dockerfile: ${{ steps.dockerfile.outputs.content }}
+    steps:
+      - name: Create Dockerfile
+        id: dockerfile
+        run: |
+          DOCKERFILE=$(cat << 'EOL'
+          # Base image
+          FROM ubuntu:20.04 AS base
+          RUN apt-get update && apt-get upgrade -y
+
+          # Stage 1
+          FROM base AS stage1
+          RUN apt-get install -y curl wget
+
+          # Stage 2
+          FROM base AS stage2
+          RUN apt-get install -y nginx redis-server
+          EOL
+          )
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$DOCKERFILE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+  emulation:
+    needs: dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save Dockerfile
+        env:
+          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
+        run: |
+          echo "$DOCKERFILE_CONTENT" > Dockerfile
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build Base Image
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          context: .
+          target: stage2
+          tags: stage2:latest
+          push: false
+          load: true
+
+      - name: Inspect Result
+        run: |
+          docker image ls
+          docker inspect stage2:latest
+
+  arm64:
+    needs: dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save Dockerfile
+        env:
+          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
+        run: |
+          echo "$DOCKERFILE_CONTENT" > Dockerfile
+
+      - name: Get Base Cache
+        uses: actions/download-artifact@v4
+        with:
+          name: base
+          path: /tmp/docker_cache
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Base Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: stage1
+          tags: stage1:latest
+          cache-from: type=local,src=/tmp/docker_cache
+          push: false
