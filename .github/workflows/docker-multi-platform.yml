@@ -139,7 +139,11 @@ jobs:
         env:
           DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
         run: |
+          ls -la /tmp/docker_cache
           echo "$DOCKERFILE_CONTENT" > Dockerfile
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker
         uses: docker/setup-docker-action@v4
@@ -159,7 +163,7 @@ jobs:
           target: stage1
           tags: stage1:latest
           platforms: linux/amd64,linux/arm64
-          cache-from: type=local,src=/tmp/docker_cache/stage1-arm64,type=local,src=/tmp/docker_cache/stage1-amd64
+          cache-from: type=local,src=/tmp/docker_cache/stage1-amd64,type=local,src=/tmp/docker_cache/stage1-arm64
           push: false
           load: true
 
