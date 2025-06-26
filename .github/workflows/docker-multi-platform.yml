@@ -178,4 +178,4 @@ jobs:
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect stage1:latest
+          docker buildx imagetools inspect $IMAGE:latest
