@@ -132,6 +132,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build Base Image to load
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: stage1
+          tags: ${{ env.IMAGE }}
+          push: false
+
+      - name: Save Image
+        run: |
+          docker save -o something.tar stage1:latest
+          ls -la
+
       - name: Build Base Image
         uses: docker/build-push-action@v6
         id: build
