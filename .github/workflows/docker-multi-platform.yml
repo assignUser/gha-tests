@@ -126,10 +126,11 @@ jobs:
         env:
           ARCH: ${{ matrix.platform }}
         run: |
-          docker save -o $arch.tar stage1-$ARCH:latest
+          docker save -o $ARCH.tar stage1-$ARCH:latest
       - name: Upload Docker Cache
         uses: actions/upload-artifact@v4
         with:
+          if-no-files-found: error
           name: stage1-${{ matrix.platform }}
           path: ${{ matrix.platform }}.tar
           retention-days: 5
