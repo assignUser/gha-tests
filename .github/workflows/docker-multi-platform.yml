@@ -94,6 +94,8 @@ jobs:
 
   native:
     needs: dockerfile
+    permissions:
+      packages: write
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
@@ -118,22 +120,24 @@ jobs:
         with:
           context: .
           target: stage1
-          tags: stage1-${{ matrix.platform }}:latest
+          tags: stage1:latest
           load: true
-          push: false
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
 
-      - name: Export Image
+      - name: Export digest
         env:
-          ARCH: ${{ matrix.platform }}
+          digest: ${{ steps.build.outputs.digest }}
         run: |
-          docker save -o $ARCH.tar stage1-$ARCH:latest
-      - name: Upload Docker Cache
+          mkdir -p ${{ runner.temp }}/digests
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
-          name: stage1-${{ matrix.platform }}
-          path: ${{ matrix.platform }}.tar
-          retention-days: 5
+          retention-days: 1
 
   combine:
     needs: [native, dockerfile]
@@ -149,31 +153,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker
-        uses: docker/setup-docker-action@v4
-        with:
-          daemon-config: |
-            {
-              "debug": true,
-              "features": {
-                "containerd-snapshotter": true
-              }
-            }
-
-      - name: Get Native Caches
+      - name: Download digests
         uses: actions/download-artifact@v4
         with:
-          pattern: stage1-*
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
           merge-multiple: true
 
-      - name: Merge Images
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
         run: |
-          docker load -i arm64.tar
-          docker load -i amd64.tar
-          docker images ls
-          arm_sha=$(docker images -q --no-trunc stage1-arm64:latest)
-          amd_sha=$(docker images -q --no-trunc stage1-amd64:latest)
+          docker buildx imagetools create -t stage1:latest \
+            $(printf 'stage1@sha256:%s ' *)
 
-          docker buildx imagetools create --dry-run -t stage1:latest $arm_sha $amd_sha
-
+      - name: Inspect image
+        run: |
           docker buildx imagetools inspect stage1:latest
