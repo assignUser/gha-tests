@@ -132,7 +132,6 @@ jobs:
           context: .
           target: stage1
           tags: ${{ env.IMAGE }}
-          load: true
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
