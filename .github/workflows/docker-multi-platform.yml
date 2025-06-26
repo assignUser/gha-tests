@@ -126,7 +126,7 @@ jobs:
           retention-days: 5
 
   combine:
-    needs: native
+    needs: [native, dockerfile]
     runs-on: ubuntu-latest
     steps:
       - name: Get Native Caches
@@ -136,4 +136,32 @@ jobs:
           merge-multiple: true
           path: /tmp/docker_cache
 
-      - run: ls -la /tmp/docker_cache
+      - name: Save Dockerfile
+        env:
+          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
+        run: |
+          echo "$DOCKERFILE_CONTENT" > Dockerfile
+
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+        with:
+          daemon-config: |
+            {
+              "debug": true,
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+
+      - name: Build Base Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: stage1
+          tags: stage1:latest
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=local,src=/tmp/docker_cache
+          push: false
+          load: true
+
+      - run: docker buildx imagetools inspect stage1:latest
