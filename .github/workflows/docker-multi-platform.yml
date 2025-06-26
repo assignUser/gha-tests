@@ -1,0 +1,188 @@
+# Copyright Jacob Wujciak-Jens
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Images supporting multiple platforms (architectures) used to require
+# Qemu due to the limited runners available in GitHub Actions but
+# now arm64 runners are available and should work much faster than with emulation
+#
+# Notes:
+# - It's possible to add multiple caches of the same time but only the last one
+#   will actually be used.
+# - It's not possible to create the multi-platform image without pushing to
+#   the registry, from what I can tell. I guess it makes sense as the
+#   multi-platform part is just another manifest wrapping the separate images
+# - Using `load: true` creates a mismatch between the output.digest and the pushed digest
+#   and can not be used. If we want to also export the image (i.e. for direct usage in further
+#   steps), we'd have to use the build action a second time. This should re-use the previous
+#   layers.
+
+name: Docker Multi-Platform Image
+
+on:
+  push:
+    paths:
+      - .github/workflows/docker-multi-platform.yml
+  workflow_dispatch: {}
+
+permissions: {}
+
+env:
+  IMAGE: ghcr.io/assignuser/stage1
+
+jobs:
+  dockerfile:
+    runs-on: ubuntu-latest
+    outputs:
+      dockerfile: ${{ steps.dockerfile.outputs.content }}
+    steps:
+      - name: Create Dockerfile
+        id: dockerfile
+        run: |
+          DOCKERFILE=$(cat << 'EOL'
+          # Base image
+          FROM ubuntu:20.04 AS base
+          RUN apt-get update && apt-get upgrade -y
+
+          # Stage 1
+          FROM base AS stage1
+          RUN apt-get install -y curl wget
+          EOL
+          )
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$DOCKERFILE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+  emulation:
+    needs: dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save Dockerfile
+        env:
+          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
+        run: |
+          echo "$DOCKERFILE_CONTENT" > Dockerfile
+
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+        with:
+          daemon-config: |
+            {
+              "debug": true,
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build Base Image
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          context: .
+          target: stage1
+          tags: stage1:latest
+          push: false
+          load: true
+
+      - name: Inspect Result
+        run: |
+          docker image ls
+          docker inspect stage1:latest
+
+  native:
+    needs: dockerfile
+    permissions:
+      packages: write
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04-arm
+            platform: arm64
+          - runner: ubuntu-24.04
+            platform: amd64
+
+    steps:
+      - name: Save Dockerfile
+        env:
+          DOCKERFILE_CONTENT: ${{ needs.dockerfile.outputs.dockerfile }}
+        run: |
+          echo "$DOCKERFILE_CONTENT" > Dockerfile
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Base Image
+        uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: .
+          target: stage1
+          tags: ${{ env.IMAGE }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        env:
+          digest: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.platform }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  combine:
+    needs: [native, dockerfile]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create -t $IMAGE:latest \
+            $(printf "$IMAGE@sha256:%s " *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect $IMAGE:latest
