@@ -31,7 +31,7 @@ on:
 permissions: {}
 
 env:
-  IMAGE: ghcr.io/assignUser/stage1
+  IMAGE: ghcr.io/assignuser/stage1
 
 jobs:
   dockerfile:
