@@ -95,9 +95,9 @@ jobs:
       matrix:
         include:
           - runner: ubuntu-24.04-arm
-            platform: linux/arm64
+            platform: arm64
           - runner: ubuntu-24.04
-            platform: linux/amd64
+            platform: amd64
 
     steps:
       - name: Save Dockerfile
