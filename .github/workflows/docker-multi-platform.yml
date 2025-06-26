@@ -115,8 +115,7 @@ jobs:
           context: .
           target: stage1
           tags: stage1:latest
-          platform: ${{ matrix.platform }}
-          cache-to: type=local,src=/tmp/docker_cache
+          cache-to: type=local,dest=/tmp/docker_cache
           push: false
 
       - name: Upload Docker Cache
