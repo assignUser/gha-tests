@@ -133,7 +133,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: stage1-*
-          merge-multiple: true
           path: /tmp/docker_cache
 
       - name: Save Dockerfile
@@ -160,7 +159,7 @@ jobs:
           target: stage1
           tags: stage1:latest
           platforms: linux/amd64,linux/arm64
-          cache-from: type=local,src=/tmp/docker_cache
+          cache-from: type=local,src=/tmp/docker_cache/stage1-arm64,type=local,src=/tmp/docker_cache/stage1-amd64
           push: false
           load: true
 
