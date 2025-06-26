@@ -13,12 +13,19 @@
 # limitations under the License.
 
 # Images supporting multiple platforms (architectures) used to require
-# Quemu due to the limited runners available in GitHub Actions but
+# Qemu due to the limited runners available in GitHub Actions but
 # now arm64 runners are available and should work much faster than with emulation
 #
 # Notes:
-# It's possible to add multiple caches of the same time but only the last one
-# will actually be used.
+# - It's possible to add multiple caches of the same time but only the last one
+#   will actually be used.
+# - It's not possible to create the multi-platform image without pushing to
+#   the registry, from what I can tell. I guess it makes sense as the
+#   multi-platform part is just another manifest wrapping the separate images
+# - Using `load: true` creates a mismatch between the output.digest and the pushed digest
+#   and can not be used. If we want to also export the image (i.e. for direct usage in further
+#   steps), we'd have to use the build action a second time. This should re-use the previous
+#   layers.
 
 name: Docker Multi-Platform Image
 
